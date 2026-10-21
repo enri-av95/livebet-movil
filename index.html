@@ -221,7 +221,7 @@ function futDetail(m){const d=fdist(m),k=m.mk;
      <tr><td>Doble oportunidad X2</td><td class="num">${pc(d.X+d.A,1)}</td><td class="num">${fo(d.X+d.A)}</td></tr>
      <tr><td>Goles esperados</td><td class="num" colspan="2">${(m.lh||0).toFixed(2).replace('.',',')} – ${(m.la||0).toFixed(2).replace('.',',')}</td></tr></table></div>
    ${typeof extraMarkets==='function'?(()=>{const X=extraMarkets(d.cells,D.football.lead);return Object.entries(MX_GROUPS).map(([g,t])=>`<div class="gh">${t}</div><div class="card"><table>${X.filter(x=>x.g===g).map(x=>`<tr><td>${esc(x.n)}</td><td class="num" style="white-space:nowrap">${pc(x.p,1)}</td><td class="num">${fo(x.p)}</td></tr>`).join('')}</table></div>`).join('')
-     +'<div class="note">«1UP»: probabilidad de que ese equipo vaya por delante en el marcador en algún momento del partido, aunque luego no gane.</div>'})():''}
+     })():''}
    ${m.rel&&m.rel!=='fiable'?`<div class="note">Fiabilidad del pronóstico: <b>${esc(m.rel.replace('_',' '))}</b>.</div>`:''}`)}
 
 // ---------- pestaña Pádel
@@ -261,7 +261,7 @@ function padDetail(m){const t1=pt1(m),t2=pt2(m),O=(m.bk&&m.bk.odds)||{},T=m.game
    ${(m.warnings||[]).length?`<div class="note">⚠︎ ${m.warnings.map(esc).join(' · ')}</div>`:''}`)}
 
 // ---------- pestaña Selecciones
-const GRP=[['all','Todos'],['1X2','1X2'],['double_chance','Doble oport.'],['total_goals','Goles'],['btts','Ambos marcan'],['lead','Va ganando (1UP)'],['handicap','Hándicap'],['team_goals','Goles equipo'],['combo','Combinados']];
+const GRP=[['all','Todos'],['1X2','1X2'],['double_chance','Doble oport.'],['total_goals','Goles'],['btts','Ambos marcan'],['handicap','Hándicap'],['team_goals','Goles equipo'],['combo','Combinados']];
 const RNG=[['1','Hoy'],['2','Mañana'],['3','3 días'],['7','7 días']];
 function selView(){
   $('#hdr').innerHTML=`<div class="top"><h1>Selecciones</h1>${stampHtml()}</div>
@@ -281,9 +281,9 @@ function selRow(p,title,sub,odds,ev){return `<div class="sel"><div class="ring n
 function selFut(){const F=D.football,now=Date.now(),days=+ST.rng,thr=ST.thr/100;
   const end=new Date();end.setHours(0,0,0,0);end.setDate(end.getDate()+days);
   const start=ST.rng==='2'?(()=>{const s=new Date();s.setHours(0,0,0,0);s.setDate(s.getDate()+1);return +s})():now;
-  const L=F.feed.filter(f=>f.p>=thr-1e-9&&(ST.grp==='all'||f.group===ST.grp)&&!/^Más de 0,5/.test(f.market)&&new Date(f.ko)>start&&new Date(f.ko)<end).sort((a,b)=>b.p-a.p);
+  const L=F.feed.filter(f=>f.group!=='lead'&&f.p>=thr-1e-9&&(ST.grp==='all'||f.group===ST.grp)&&!/^Más de 0,5/.test(f.market)&&new Date(f.ko)>start&&new Date(f.ko)<end).sort((a,b)=>b.p-a.p);
   const FL=ST.grp==='all'?F.feed_live:(F.feed_live_grp||{})[ST.grp];
-  $('#main').innerHTML=(ST.grp==='lead'?'<div class="note">El 1UP aún no tiene seguimiento real (hace falta el orden de los goles); la fórmula está validada con 150 000 partidos.</div>':trackLine(FL,ST.thr,'Seguimiento real'))+(L.length?`<div class="gh">${L.length} selecciones</div><div class="card">${L.slice(0,300).map(f=>selRow(f.p,esc(f.market),`${esc(f.home)} – ${esc(f.away)} · ${dayLabel(dayKey(f.ko))} ${hm(f.ko)} · ${esc(f.comp)}`,f.odds,f.ev)).join('')}</div>`:'<div class="empty">Ninguna selección supera el umbral en este periodo.</div>')
+  $('#main').innerHTML=trackLine(FL,ST.thr,'Seguimiento real')+(L.length?`<div class="gh">${L.length} selecciones</div><div class="card">${L.slice(0,300).map(f=>selRow(f.p,esc(f.market),`${esc(f.home)} – ${esc(f.away)} · ${dayLabel(dayKey(f.ko))} ${hm(f.ko)} · ${esc(f.comp)}`,f.odds,f.ev)).join('')}</div>`:'<div class="empty">Ninguna selección supera el umbral en este periodo.</div>')
    +`<div class="note">Solo partidos fiables. <b>Probable no es rentable</b>: con cuota 1,20 hay que acertar más del 83,3 % solo para no perder. VE = probabilidad × cuota − 1.</div>`;
   $('#main').onclick=null}
 function selPad(){const P=D.padel,thr=ST.thr/100;
