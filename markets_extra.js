@@ -21,4 +21,5 @@ function extraMarkets(cells,lead){
   for(const l of [1.5,2.5,3.5]){const s=String(l).replace('.',',');
     c('combo',`Gana local y más de ${s} goles`,(h,a)=>h>a&&h+a>l);c('combo',`Gana visitante y más de ${s} goles`,(h,a)=>a>h&&h+a>l)}
   return out}
-const MX_GROUPS={lead:'Va ganando (1UP)',handicap:'Hándicap',team_goals:'Goles por equipo',combo:'Combinados'};
+// 21-oct: el 1UP se calcula y se registra para calibrar, pero NO se muestra (decisión del usuario).
+const MX_GROUPS={handicap:'Hándicap',team_goals:'Goles por equipo',combo:'Combinados'};
