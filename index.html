@@ -85,6 +85,9 @@ main{padding:4px 16px 16px}
 .slider b{color:var(--text);min-width:44px;text-align:right}
 .track{display:flex;gap:10px;align-items:center;background:var(--surface);border-radius:var(--r);padding:12px 14px;margin-top:12px;box-shadow:var(--shadow);font-size:13px;color:var(--text-2)}
 .track b{color:var(--text)}
+.czb{display:flex;gap:8px}.czb button{flex:1;padding:9px 0 7px;border-radius:12px;background:var(--surface-2);font-weight:800;font-size:18px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.czb button small{font-size:11px;font-weight:600;color:var(--text-3)}.czb button.on{background:var(--accent);color:#fff}.czb button.on small{color:rgba(255,255,255,.85)}
+.czb button:disabled{opacity:.5}
 /* tab bar */
 nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--tab);backdrop-filter:saturate(1.8) blur(18px);-webkit-backdrop-filter:saturate(1.8) blur(18px);
   border-top:1px solid var(--line);padding:6px 8px calc(6px + var(--safe-b))}
@@ -128,6 +131,7 @@ tr:first-child td{border-top:0}
   <button data-v="fut" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7.5l4.2 3-1.6 5h-5.2l-1.6-5z"/><path d="M12 3v4.5M16.2 10.5l4.4-1.4M14.6 15.5l2.7 3.8M9.4 15.5l-2.7 3.8M7.8 10.5L3.4 9.1"/></svg>Fútbol</button>
   <button data-v="pad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><ellipse cx="10" cy="9" rx="6" ry="6.5"/><path d="M14.2 13.6l5.6 6.4"/><circle cx="8" cy="7.5" r=".6" fill="currentColor"/><circle cx="11.5" cy="7" r=".6" fill="currentColor"/><circle cx="9.5" cy="10.5" r=".6" fill="currentColor"/><circle cx="19" cy="5" r="2"/></svg>Pádel</button>
   <button data-v="sel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 12.5l4.5 4.5L20 6.5"/></svg>Selecciones</button>
+  <button data-v="cz"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>Corazonadas</button>
 </nav>
 <div id="sheetwrap"><div class="sheet-bg" id="sbg"></div><div class="sheet" id="sheet"><div class="grab"></div><div class="sh"><h2 id="stitle"></h2><button class="x" id="sx" aria-label="Cerrar">×</button></div><div class="sb" id="sbody"></div></div></div>
 <script src="padel_core.js"></script>
@@ -174,7 +178,7 @@ function stampHtml(){const g=D.football.generated_at,h=(Date.now()-new Date(g))/
   return `<div class="stamp ${h>30?'old':''}">Datos ${ago(g)}${h>30?'<br>sin actualizar':''}</div>`}
 function render(){
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===ST.v));
-  if(!D)return;({fut:futView,pad:padView,sel:selView})[ST.v]();save()}
+  if(!D)return;({fut:futView,pad:padView,sel:selView,cz:czView})[ST.v]();save()}
 $('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;ST.v=b.dataset.v;scrollTo(0,0);render()};
 
 // ---------- pestaña Fútbol
@@ -211,6 +215,7 @@ function futDetail(m){const d=fdist(m),k=m.mk;
   openSheet(`${esc(m.home)} – ${esc(m.away)}<div class="sub" style="font-size:13px;font-weight:500">${esc(m.comp)} · ${dayLabel(dayKey(m.ko))} ${hm(m.ko)}</div>`,
    `<div class="kp">${kp('1 · '+esc(m.home),d.H,k&&k.odds&&k.odds[0])}${kp('X · Empate',d.X,k&&k.odds&&k.odds[1])}${kp('2 · '+esc(m.away),d.A,k&&k.odds&&k.odds[2])}</div>
    ${k?`<div class="note" style="padding-bottom:0">Cuotas de ${esc(k.book||'la casa')}. «Justa» = 1 ÷ probabilidad del modelo.</div>`:''}
+   ${czBlock(m)}
    <div class="gh">Marcadores más probables</div><div class="card">${d.top.map(([h,a,p])=>`<div class="hb"><div class="k num">${h} – ${a}</div><div class="tr"><i style="width:${p/mx*100}%"></i></div><div class="v num">${pc(p,1)}</div><div class="o num">${fo(p)}</div></div>`).join('')}</div>
    <div class="gh">Goles</div><div class="card"><table><tr><th>Línea</th><th>Menos</th><th>Justa</th><th>Más</th><th>Justa</th></tr>${ou}</table></div>${ouMk}
    <div class="gh">Otros</div><div class="card"><table>
@@ -222,7 +227,58 @@ function futDetail(m){const d=fdist(m),k=m.mk;
      <tr><td>Goles esperados</td><td class="num" colspan="2">${(m.lh||0).toFixed(2).replace('.',',')} – ${(m.la||0).toFixed(2).replace('.',',')}</td></tr></table></div>
    ${typeof extraMarkets==='function'?(()=>{const X=extraMarkets(d.cells,D.football.lead);return Object.entries(MX_GROUPS).map(([g,t])=>`<div class="gh">${t}</div><div class="card"><table>${X.filter(x=>x.g===g).map(x=>`<tr><td>${esc(x.n)}</td><td class="num" style="white-space:nowrap">${pc(x.p,1)}</td><td class="num">${fo(x.p)}</td></tr>`).join('')}</table></div>`).join('')
      })():''}
-   ${m.rel&&m.rel!=='fiable'?`<div class="note">Fiabilidad del pronóstico: <b>${esc(m.rel.replace('_',' '))}</b>.</div>`:''}`)}
+   ${m.rel&&m.rel!=='fiable'?`<div class="note">Fiabilidad del pronóstico: <b>${esc(m.rel.replace('_',' '))}</b>.</div>`:''}`);czBind(m)}
+
+// ---------- corazonadas (23-oct): se marcan ANTES del partido, se suben cifradas a GitHub (cz/) y el PC las puntúa a diario
+const CZK='lb_cz_local',PICKN={H:'1',D:'X',A:'2'};
+const czLocal=()=>{try{return JSON.parse(localStorage.getItem(CZK)||'[]')}catch(e){return []}};
+const czSaveLocal=L=>{try{localStorage.setItem(CZK,JSON.stringify(L.slice(-500)))}catch(e){}};
+function czFor(m){const L=czLocal().filter(c=>c.id===m.id);return L.length?L[L.length-1]:null}
+async function encryptJson(obj,pw){const te=new TextEncoder(),salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));
+  const base=await crypto.subtle.importKey('raw',te.encode(pw),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt']);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,te.encode(JSON.stringify(obj))));
+  const out=new Uint8Array(31+ct.length);out.set([76,66,49]);out.set(salt,3);out.set(iv,19);out.set(ct,31);
+  let s='';for(let i=0;i<out.length;i+=8192)s+=String.fromCharCode.apply(null,out.subarray(i,i+8192));return btoa(s)}
+async function czSubmit(m,pick,note){const W=D.cz_write;if(!W)throw new Error('falta CorazonadasToken.txt en el PC');
+  if(new Date(m.ko)<=new Date())throw new Error('el partido ya ha empezado');
+  const d=fdist(m),k=m.mk;
+  const rec={v:1,id:m.id,label:m.label||null,comp:m.comp,home:m.home,away:m.away,ko:m.ko,pick,note:note||'',p:{H:d.H,X:d.X,A:d.A},
+    odds:k&&k.odds||null,book:k&&k.book||null,device_time:new Date().toISOString()};
+  const name=Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.enc';
+  const r=await fetch(`https://api.github.com/repos/${W.repo}/contents/cz/${name}`,{method:'PUT',
+    headers:{'Authorization':'Bearer '+W.token,'Accept':'application/vnd.github+json'},
+    body:JSON.stringify({message:'corazonada',content:await encryptJson(rec,getPw())})});
+  if(!r.ok){let msg=String(r.status);try{msg+=' '+(await r.json()).message}catch(e){}throw new Error('GitHub '+msg)}
+  const L=czLocal();L.push({...rec,file:name,saved:new Date().toISOString()});czSaveLocal(L);return rec}
+function czBlock(m){if(!m.ko||new Date(m.ko)<=new Date())return '';
+  const d=fdist(m),c=czFor(m),pp={H:d.H,D:d.X,A:d.A};
+  return `<div class="gh">Mi corazonada</div><div class="card" style="padding:12px 14px">
+   <div class="czb" id="czb">${['H','D','A'].map(k=>`<button data-k="${k}" class="${c&&c.pick===k?'on':''}">${PICKN[k]}<small>modelo ${pc(pp[k])}</small></button>`).join('')}</div>
+   <input class="search" id="cznote" placeholder="¿Por qué? (opcional)" value="${c?esc(c.note||''):''}" style="margin:10px 0 0">
+   <div class="note" id="czmsg" style="padding:8px 0 0">${c?`Guardada: <b>${PICKN[c.pick]}</b> · ${ago(c.saved)}. Puedes cambiarla hasta el inicio; cuenta la última.`
+     :(D.cz_write?'Toca 1, X o 2 antes del partido: se guarda cifrada y luego se compara con el modelo.':'Para guardar corazonadas falta CorazonadasToken.txt en el PC.')}</div></div>`}
+function czBind(m){const b=$('#czb');if(!b)return;
+  b.onclick=async e=>{const x=e.target.closest('button');if(!x||x.disabled)return;const all=[...b.querySelectorAll('button')];
+    all.forEach(y=>y.disabled=true);$('#czmsg').textContent='Guardando…';
+    try{await czSubmit(m,x.dataset.k,$('#cznote').value.trim());all.forEach(y=>y.classList.toggle('on',y===x));
+      $('#czmsg').innerHTML=`Guardada: <b>${PICKN[x.dataset.k]}</b>. Se puntúa tras el partido, en la actualización diaria.`}
+    catch(err){$('#czmsg').textContent='No se pudo guardar: '+err.message}
+    all.forEach(y=>y.disabled=false)}}
+function czView(){const C=D.cz||{},S=C.resumen||{},rows=C.filas||[];
+  $('#hdr').innerHTML=`<div class="top"><h1>Corazonadas</h1>${stampHtml()}</div>`;
+  const pend=czLocal().filter(c=>!rows.some(r=>r.ko===c.ko&&r.home===c.home)).reverse();
+  const blk=(t,b)=>b&&b.n?`<div class="sel"><div class="ring num" style="--p:${Math.round(b.tasa*100)}">${Math.round(b.tasa*100)}</div><div class="m"><b>${t}: ${b.aciertos} de ${b.n}</b>
+    <div class="sub">el modelo esperaba ${pc(b.esperado_modelo)} · su favorito acertó ${pc(b.tasa_modelo)}</div>${b.roi!=null?`<div class="sub">con la cuota guardada: ROI ${pc(b.roi,1)} (${b.n_cuota})</div>`:''}</div></div>`:'';
+  const mark=r=>!r.valida?'<span class="pill w">tardía</span>':(r.acierto==null?'<span class="pill">pendiente</span>':(r.acierto?'<span class="pill g">✓ acierto</span>':'<span class="pill w">✗ fallo</span>'));
+  const row=r=>`<div class="sel"><div class="ring num" style="--p:${Math.round((r.p_pick||0)*100)}">${PICKN[r.pick]}</div><div class="m"><b>${esc(r.home)} – ${esc(r.away)}</b>
+    <div class="sub">${r.ko?dayLabel(dayKey(r.ko))+' '+hm(r.ko):''} · ${esc(r.comp||'')} · modelo ${pc(r.p_pick)}${r.score?` · <b>${r.score}</b>`:''}</div>${r.note?`<div class="sub">«${esc(r.note)}»</div>`:''}</div><div>${mark(r)}</div></div>`;
+  const T=S.todas||{};
+  $('#main').innerHTML=(T.n?`<div class="gh">Balance</div><div class="card">${blk('Todas',T)}${blk('Contra el favorito del modelo',S.contra_modelo)}${blk('Con el favorito del modelo',S.con_modelo)}</div>
+      <div class="note">Si tu intuición aporta algo, acertarás más de lo que «esperaba el modelo», sobre todo cuando vas contra su favorito. Hacen falta decenas de corazonadas para que signifique algo.</div>`
+      :`<div class="note">Aún no hay corazonadas puntuadas. Abre un partido en Fútbol y toca 1, X o 2 en «Mi corazonada» antes de que empiece.</div>`)
+    +(pend.length?`<div class="gh">Enviadas desde este móvil (aún sin procesar)</div><div class="card">${pend.map(c=>row({...c,valida:true,p_pick:c.p[c.pick==='D'?'X':c.pick]})).join('')}</div>`:'')
+    +(rows.length?`<div class="gh">Registro</div><div class="card">${rows.slice(0,300).map(row).join('')}</div>`:'')}
 
 // ---------- pestaña Pádel
 const pt1=m=>m.team1_short||m.team1,pt2=m=>m.team2_short||m.team2;
